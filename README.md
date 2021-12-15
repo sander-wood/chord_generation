@@ -4,9 +4,9 @@ This is the reproduction of 'Chord Generation from Symbolic Melody Using BLSTM N
 \
 The input melodies and harmonized samples are in the `inputs` and `outputs` folders respectively.\
 \
-This reproduced model is the same as the original setup, except that we replaced the dataset with the Nottingham Lead Sheet Dataset (the original one trained/validated on the Wikifonia Dataset).\
+This reproduced model is the same as the original setup, except that we replaced the dataset with the [Nottingham Lead Sheet Dataset](https://github.com/sander-wood/autoharmonizer) (the original one trained/validated on the [Wikifonia Dataset](http://www.synthzone.com/forum/ubbthreads.php/topics/384909/Download_for_Wikifonia_all_6_6)).\
 \
-For more information, see their paper: arXiv paper.
+For more information, see their paper: [arXiv paper](https://arxiv.org/abs/1712.01011).
 
 ## Install Dependencies
 Python: 3.7.9\
