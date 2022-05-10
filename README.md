@@ -4,7 +4,7 @@ This is the reproduction of 'Chord Generation from Symbolic Melody Using BLSTM N
 \
 The input melodies and harmonized samples are in the `inputs` and `outputs` folders respectively.\
 \
-This reproduced model is the same as the original setup, trained/validated on the [Wikifonia Dataset](http://www.synthzone.com/forum/ubbthreads.php/topics/384909/Download_for_Wikifonia_all_6_6)).\
+This reproduced model is the same as the original setup, trained/validated on the [Wikifonia Dataset](http://www.synthzone.com/forum/ubbthreads.php/topics/384909/Download_for_Wikifonia_all_6_6), except that we have added the additional "rest" chord type.\
 \
 For more information, see their paper: [arXiv paper](https://arxiv.org/abs/1712.01011).
 
