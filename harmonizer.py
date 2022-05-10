@@ -1,9 +1,16 @@
+import os
 import numpy as np
 from music21 import *
-from loader import music_loader
-from train_model import build_model
+from loader import get_filenames, convert_files
+from model import build_model
+from config import *
+from tqdm import trange
 
-chord_dictionary = ['Cm', 'C',
+# use cpu
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+chord_dictionary = ['R',
+                    'Cm', 'C',
                     'C#m', 'C#',
                     'Dm', 'D',
                     'D#m', 'D#',
@@ -31,65 +38,71 @@ def predict(song, model):
         net_output = model.predict(melody)[0]
 
         for chord_idx in net_output.argmax(axis=1):
-
             chord_list.append(chord_dictionary[chord_idx])
     
     # Create input data
     melody = [song[-4], song[-3], song[-2], song[-1]]
     melody = np.array([np.array(seg) for seg in melody])[np.newaxis, ...]
-
     
     # Predict the last four chords
-    net_output = model.predict(melody).argmax(axis=1)[0]
+    net_output = model.predict(melody)[0]
 
-    for i in range(-1*(len(song)%4), 0):
-
-        chord_list.append(chord_dictionary[net_output[idx]])
+    for idx in range(-1*(len(song)%4), 0):
+        chord_list.append(chord_dictionary[net_output[idx].argmax(axis=0)])
     
     return chord_list
 
 
-def export_music(melody_part, chord_list, filename):
+def export_music(score, chord_list, gap_list, filename):
 
-    score = []
-    next_offset = 0
-    chord_cnt = 0
-    ts = meter.TimeSignature('c')
+    harmony_list = []
+    filename = os.path.basename(filename)
+    filename = '.'.join(filename.split('.')[:-1])
+    
+    for idx in range(len(chord_list)):
+        chord = chord_list[idx]
+        if chord == 'R':
+            harmony_list.append(note.Rest())
+        
+        else:
+            harmony_list.append(harmony.ChordSymbol(chord).transpose(-1*gap_list[idx].semitones))
+   
+    m_idx = 0
+    new_score = []
 
-    # Traverse melody part
-    for element in melody_part.flat:
-
-        score.append(element)
-
-        # If is time signature
-        if isinstance(element, meter.TimeSignature):
-
-            ts = element
-
-        # If is note and chord offset not greater than note offset
-        if isinstance(element, note.Note) and len(chord_list)>chord_cnt and element.offset>=next_offset:
-            
-            # Converted to ChordSymbol
-            chord_symbol = harmony.ChordSymbol(chord_list[chord_cnt])
-            chord_symbol.offset = next_offset
-
-            score.append(chord_symbol)
-            chord_cnt += 1
-            next_offset += ts.numerator*4/ts.denominator
+    for m in score.recurse():
+        if isinstance(m, stream.Measure):
+            new_m = []
+            if not isinstance(harmony_list[m_idx], note.Rest):
+                new_m.append(harmony_list[m_idx])
+            for n in m:
+                if not isinstance(n, harmony.ChordSymbol):
+                    new_m.append(n)
+            new_m = stream.Measure(new_m)
+            new_m.offset = m.offset
+            new_score.append(new_m)
+            m_idx += 1
 
     # Save as mxl
-    score = stream.Stream(score)
-    score.write('mxl', fp='outputs/'+filename.split('.')[-2]+'.mxl')
+    new_score[-1].rightBarline = bar.Barline('final')
+    score = stream.Score(new_score)
+    score.write('mxl', fp=OUTPUTS_PATH+'/'+filename+'.mxl')
 
 
 if __name__ == '__main__':
 
     # Build model
     model = build_model(weights_path='weights.hdf5')
-    melody_data, melody_parts, filenames = music_loader(path='inputs', fromDataset=False)
+    filenames = get_filenames(input_dir=INPUTS_PATH)
+    data_corpus = convert_files(filenames, fromDataset=False)
 
     # Process each melody sequence
-    for idx, melody in enumerate(melody_data):
+    for idx in trange(len(data_corpus)):
 
-        chord_list = predict(melody, model)
-        export_music(melody_parts[idx], chord_list, filenames[idx])
+        melody_vecs = data_corpus[idx][0]
+        gap_list = data_corpus[idx][1]
+        score = data_corpus[idx][2]
+        filename = data_corpus[idx][3]
+
+        chord_list = predict(melody_vecs, model)
+        export_music(score, chord_list, gap_list, filename)
